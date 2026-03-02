@@ -1,14 +1,14 @@
 using UnityEngine;
-
 public class BuildManager : MonoBehaviour
 {
-    public GameObject towerPrefab;
+    public TowerData[] availableTowers;
     public GameObject ghostPrefab;
     public InputReader inputReader;
-
+    public float gridSize = 1f;
     private GameObject currentGhost;
     private bool canBuild = false;
-
+    private TowerData selectedTower;
+    public EconomyManager economyManager;
     private void Start()
     {
         currentGhost = Instantiate(ghostPrefab);
@@ -41,12 +41,15 @@ public class BuildManager : MonoBehaviour
         {
             if (hit.collider.CompareTag("Ground"))
             {
-                Vector3 pos = hit.point;
-                pos.y = 0.5f;
+                Vector3 pos = SnapToGrid(hit.point);
 
                 currentGhost.transform.position = pos;
 
-                canBuild = IsBuildPositionValid(pos);
+                bool validPosition = IsBuildPositionValid(pos);
+                bool hasMoney = selectedTower != null && 
+                                economyManager.CanAfford(selectedTower.cost);
+
+                canBuild = validPosition && hasMoney;
                 UpdateGhostColor();
             }
         }
@@ -54,13 +57,13 @@ public class BuildManager : MonoBehaviour
 
     private bool IsBuildPositionValid(Vector3 position)
     {
-        float checkRadius = 0.7f;
+        float checkRadius = 0.4f;
 
         Collider[] colliders = Physics.OverlapSphere(position, checkRadius);
 
         foreach (Collider col in colliders)
         {
-            if (col.CompareTag("Tower"))
+            if (col.CompareTag("Tower") || col.CompareTag("Path"))
                 return false;
         }
 
@@ -79,9 +82,29 @@ public class BuildManager : MonoBehaviour
 
     private void TryBuildTower(Vector2 mousePosition)
     {
-        if (!canBuild)
+        if (!canBuild || selectedTower == null)
             return;
 
-        Instantiate(towerPrefab, currentGhost.transform.position, Quaternion.identity);
+        economyManager.Spend(selectedTower.cost);
+
+        Instantiate(selectedTower.prefab, 
+                    currentGhost.transform.position, 
+                    Quaternion.identity);
     }
+    private Vector3 SnapToGrid(Vector3 position)
+    {
+        float x = Mathf.Round(position.x / gridSize) * gridSize;
+        float z = Mathf.Round(position.z / gridSize) * gridSize;
+
+        return new Vector3(x, 0.5f, z);
+    }
+    public void SelectTower(int index)
+{
+    if (index < 0 || index >= availableTowers.Length)
+        return;
+
+    selectedTower = availableTowers[index];
 }
+}
+
+    

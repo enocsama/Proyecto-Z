@@ -8,25 +8,28 @@ public class TowerAttack : MonoBehaviour
 
     private float fireCooldown = 0f;
 
-    void Update()
+    private Transform GetClosestEnemy()
     {
-        fireCooldown -= Time.deltaTime;
-
         Collider[] enemies = Physics.OverlapSphere(transform.position, range);
+
+        float shortestDistance = Mathf.Infinity;
+        Transform closestEnemy = null;
 
         foreach (Collider col in enemies)
         {
             if (col.CompareTag("Enemy"))
             {
-                if (fireCooldown <= 0f)
-                {
-                    col.GetComponent<EnemyHealth>().TakeDamage(damage);
-                    fireCooldown = 1f / fireRate;
-                }
+                float distance = Vector3.Distance(transform.position, col.transform.position);
 
-                break; // solo ataca al primero que encuentre
+                if (distance < shortestDistance)
+                {
+                    shortestDistance = distance;
+                    closestEnemy = col.transform;
+                }
             }
         }
+
+        return closestEnemy;
     }
 
     void OnDrawGizmosSelected()
